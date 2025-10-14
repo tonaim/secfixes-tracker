@@ -30,6 +30,47 @@ jobs:
       - name: Install Python dependencies
         run: pip3 install -r requirements.txt
 
+      - name: Debug libapk loading
+        run: |
+          echo "=== Finding libapk files ==="
+          find /usr /lib -name "*libapk*" 2>/dev/null
+          echo ""
+          echo "=== Checking library metadata ==="
+          apk info -L apk-tools | grep libapk
+          echo ""
+          echo "=== Testing with Python ==="
+          python3 << 'PYEOF'
+from ctypes import cdll
+import ctypes.util
+import os
+
+print(f"LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH', 'NOT SET')}")
+
+# Try find_library
+lib_path = ctypes.util.find_library('apk')
+print(f"ctypes.util.find_library('apk'): {lib_path}")
+
+# Try each path
+attempts = [
+    'libapk.so.2.14.1',
+    'libapk.so.2.14.0', 
+    'libapk.so',
+    '/usr/lib/libapk.so',
+    '/lib/libapk.so',
+    '/usr/lib/libapk.so.2.14.1',
+    '/lib/libapk.so.2.14.1',
+]
+
+for name in attempts:
+    try:
+        lib = cdll.LoadLibrary(name)
+        print(f"✓ SUCCESS: {name}")
+        print(f"  Library object: {lib}")
+        break
+    except Exception as e:
+        print(f"✗ FAILED: {name} - {e}")
+PYEOF
+
       - name: Initialize DB
         run: flask init-db
 
