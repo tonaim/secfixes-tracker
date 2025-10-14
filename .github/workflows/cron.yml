@@ -24,19 +24,21 @@ jobs:
           echo "=== After installing apk-tools ==="
           ls -la /lib/libapk* 2>/dev/null || echo "No libapk in /lib"
           ls -la /usr/lib/libapk* 2>/dev/null || echo "No libapk in /usr/lib"
-          # Create symlinks for both libapk versions (2.14.0 for Alpine 3.18-3.19, 2.14.1 for 3.20+)
-          if [ -f /lib/libapk.so ]; then
-            ln -sf /lib/libapk.so /lib/libapk.so.2.14.0
-            ln -sf /lib/libapk.so /lib/libapk.so.2.14.1
-            echo "Created symlinks in /lib:"
-            ls -la /lib/libapk*
-          elif [ -f /usr/lib/libapk.so ]; then
-            ln -sf /usr/lib/libapk.so /usr/lib/libapk.so.2.14.0
-            ln -sf /usr/lib/libapk.so /usr/lib/libapk.so.2.14.1
-            echo "Created symlinks in /usr/lib:"
-            ls -la /usr/lib/libapk*
+          # Find actual libapk file and create symlinks
+          LIBAPK_FILE=$(find /usr/lib /lib -name "libapk.so.*" 2>/dev/null | head -1)
+          if [ -n "$LIBAPK_FILE" ]; then
+            LIBAPK_DIR=$(dirname "$LIBAPK_FILE")
+            echo "Found libapk at: $LIBAPK_FILE"
+            # Create unversioned symlink and common version symlinks
+            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so"
+            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.0"
+            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.1"
+            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.9"
+            echo "Created symlinks:"
+            ls -la $LIBAPK_DIR/libapk*
           else
-            echo "WARNING: libapk.so not found in /lib or /usr/lib!"
+            echo "ERROR: No libapk.so.* file found!"
+            exit 1
           fi
           # Set LD_LIBRARY_PATH for additional robustness
           echo "LD_LIBRARY_PATH=/usr/lib:/lib" >> $GITHUB_ENV
