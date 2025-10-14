@@ -13,36 +13,59 @@ jobs:
     env:
       FLASK_APP: secfixes_tracker
       SECFIXES_TRACKER_CONFIG: application.cfg
+
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-      - name: Install dependencies
+
+      - name: Install system dependencies
         run: |
-          apk add alpine-sdk gcc musl-dev libc-dev
-          pip3 install -r requirements.txt
+          apk add --no-cache alpine-sdk gcc musl-dev libc-dev apk-tools
+          # Verify libapk library is available (should be installed by apk-tools)
+          echo "Searching for libapk library..."
+          find /lib /usr/lib /lib64 /usr/lib64 -name "libapk*" 2>/dev/null || true
+          # Ensure LD_LIBRARY_PATH includes common library directories
+          for dir in /lib /usr/lib /lib64 /usr/lib64; do
+            if [ -d "$dir" ]; then
+              export LD_LIBRARY_PATH="$dir:$LD_LIBRARY_PATH"
+            fi
+          done
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "Library path configured: $LD_LIBRARY_PATH"
+
+      - name: Install Python dependencies
+        run: pip3 install -r requirements.txt
+
       - name: Initialize DB
         run: flask init-db
+
       - name: Import APKINDEX
         run: flask import-apkindex
+
       - name: Import secfixes
         run: flask import-secfixes
+
       - name: Import NVD
         run: |
-          for year in $(seq 2018 $(date "+%Y"))
-          do
+          for year in $(seq 2018 $(date "+%Y")); do
             flask import-nvd $year
           done
+
       - name: Update states
         run: flask update-states
+
       - name: Clean existing files
         run: rm -rf data && mkdir data
+
       - name: Export JSON files
         run: flask export
+
       - name: Compress
         run: |
           tar cvfz all.tar.gz data
           mkdir -p public
           mv all.tar.gz public
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:

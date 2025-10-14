@@ -1,4 +1,5 @@
 from ctypes import cdll
+import ctypes.util
 
 
 VersionUnknown = 0
@@ -8,7 +9,26 @@ VersionGreater = 4
 VersionFuzzy = 8
 
 
-libapk = cdll.LoadLibrary('libapk.so.2.14.0')
+# Try to load libapk with different strategies
+libapk = None
+for lib_name in ['libapk.so.2.14.0', 'libapk.so', 'apk']:
+    try:
+        libapk = cdll.LoadLibrary(lib_name)
+        break
+    except OSError:
+        pass
+
+# Try using ctypes.util.find_library as fallback
+if libapk is None:
+    lib_path = ctypes.util.find_library('apk')
+    if lib_path:
+        libapk = cdll.LoadLibrary(lib_path)
+
+if libapk is None:
+    raise OSError(
+        "Could not load libapk. Make sure apk-tools is installed and "
+        "libapk.so is available in the library path."
+    )
 
 
 def do_compare(ver1: str, ver2: str, ops: int):
