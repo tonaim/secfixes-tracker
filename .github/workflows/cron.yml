@@ -21,20 +21,40 @@ jobs:
       - name: Install system dependencies
         run: |
           apk add --no-cache alpine-sdk gcc musl-dev libc-dev apk-tools
-          # Verify libapk library is available (should be installed by apk-tools)
-          echo "Searching for libapk library..."
-          find /lib /usr/lib /lib64 /usr/lib64 -name "libapk*" 2>/dev/null || true
-          # Ensure LD_LIBRARY_PATH includes common library directories
-          for dir in /lib /usr/lib /lib64 /usr/lib64; do
-            if [ -d "$dir" ]; then
-              export LD_LIBRARY_PATH="$dir:$LD_LIBRARY_PATH"
-            fi
-          done
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "Library path configured: $LD_LIBRARY_PATH"
+          echo "=== Searching for libapk library ==="
+          find / -name "libapk*" 2>/dev/null || true
+          echo "=== Checking /usr/lib ==="
+          ls -la /usr/lib/ | grep apk || true
+          echo "=== Checking /lib ==="
+          ls -la /lib/ | grep apk || true
+          # Set LD_LIBRARY_PATH to include standard library directories
+          echo "LD_LIBRARY_PATH=/usr/lib:/lib" >> $GITHUB_ENV
 
       - name: Install Python dependencies
         run: pip3 install -r requirements.txt
+
+      - name: Debug library loading
+        run: |
+          echo "=== LD_LIBRARY_PATH: $LD_LIBRARY_PATH ==="
+          echo "=== Testing Python ctypes library loading ==="
+          python3 -c "
+from ctypes import cdll
+import ctypes.util
+import os
+
+print('LD_LIBRARY_PATH:', os.environ.get('LD_LIBRARY_PATH', 'NOT SET'))
+print('Trying to find apk library...')
+lib_path = ctypes.util.find_library('apk')
+print(f'find_library(apk): {lib_path}')
+
+for lib_name in ['libapk.so.2.14.1', 'libapk.so.2.14.0', 'libapk.so', 'apk', '/usr/lib/libapk.so', '/lib/libapk.so']:
+    try:
+        lib = cdll.LoadLibrary(lib_name)
+        print(f'✓ Successfully loaded: {lib_name}')
+        break
+    except OSError as e:
+        print(f'✗ Failed to load {lib_name}: {e}')
+"
 
       - name: Initialize DB
         run: flask init-db

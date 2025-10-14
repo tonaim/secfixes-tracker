@@ -11,7 +11,16 @@ VersionFuzzy = 8
 
 # Try to load libapk with different strategies
 libapk = None
-for lib_name in ['libapk.so.2.14.0', 'libapk.so', 'apk']:
+lib_names = [
+    'libapk.so.2.14.1',  # Alpine 3.20+
+    'libapk.so.2.14.0',  # Alpine 3.18-3.19
+    'libapk.so',         # Unversioned symlink
+    '/usr/lib/libapk.so',  # Absolute path
+    '/lib/libapk.so',      # Alternative location
+    'apk',               # Short name
+]
+
+for lib_name in lib_names:
     try:
         libapk = cdll.LoadLibrary(lib_name)
         break
@@ -22,12 +31,16 @@ for lib_name in ['libapk.so.2.14.0', 'libapk.so', 'apk']:
 if libapk is None:
     lib_path = ctypes.util.find_library('apk')
     if lib_path:
-        libapk = cdll.LoadLibrary(lib_path)
+        try:
+            libapk = cdll.LoadLibrary(lib_path)
+        except OSError:
+            pass
 
 if libapk is None:
     raise OSError(
         "Could not load libapk. Make sure apk-tools is installed and "
-        "libapk.so is available in the library path."
+        "libapk.so is available in the library path. "
+        f"Tried: {', '.join(lib_names)}"
     )
 
 
