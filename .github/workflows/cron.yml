@@ -24,17 +24,14 @@ jobs:
           echo "=== After installing apk-tools ==="
           ls -la /lib/libapk* 2>/dev/null || echo "No libapk in /lib"
           ls -la /usr/lib/libapk* 2>/dev/null || echo "No libapk in /usr/lib"
-          # Find actual libapk file and create symlinks
+          # Find actual libapk file and create unversioned symlink
           LIBAPK_FILE=$(find /usr/lib /lib -name "libapk.so.*" 2>/dev/null | head -1)
           if [ -n "$LIBAPK_FILE" ]; then
             LIBAPK_DIR=$(dirname "$LIBAPK_FILE")
             echo "Found libapk at: $LIBAPK_FILE"
-            # Create unversioned symlink and common version symlinks
+            # Create ONLY unversioned symlink (don't create fake version symlinks)
             ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so"
-            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.0"
-            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.1"
-            ln -sf "$LIBAPK_FILE" "$LIBAPK_DIR/libapk.so.2.14.9"
-            echo "Created symlinks:"
+            echo "Created symlink:"
             ls -la $LIBAPK_DIR/libapk*
           else
             echo "ERROR: No libapk.so.* file found!"

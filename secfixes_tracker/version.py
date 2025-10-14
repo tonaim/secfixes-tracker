@@ -12,12 +12,12 @@ VersionFuzzy = 8
 # Try to load libapk with different strategies
 libapk = None
 lib_names = [
+    '/usr/lib/libapk.so',      # Unversioned symlink (created by workflow) - absolute path
+    '/lib/libapk.so',          # Unversioned symlink (alternative location) - absolute path
+    'libapk.so',               # Unversioned symlink - relative
     'libapk.so.2.14.9',        # Alpine 3.22+ (relative)
     'libapk.so.2.14.1',        # Alpine 3.20+ (relative)
     'libapk.so.2.14.0',        # Alpine 3.18-3.19 (relative)
-    'libapk.so',               # Unversioned symlink
-    '/usr/lib/libapk.so',      # Absolute unversioned
-    '/lib/libapk.so',          # Absolute unversioned (alternative)
     '/usr/lib/libapk.so.2.14.9',  # Absolute versioned (3.22+)
     '/usr/lib/libapk.so.2.14.1',  # Absolute versioned (3.20+)
     '/usr/lib/libapk.so.2.14.0',  # Absolute versioned (3.18-3.19)
