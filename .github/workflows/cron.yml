@@ -50,7 +50,7 @@ jobs:
           find / -name "*libapk*" 2>/dev/null || echo "No libapk files found"
           echo ""
           echo "=== Checking what apk-tools package installed ==="
-          apk info -L apk-tools | grep -i apk
+          apk info -L apk-tools | grep -i apk || echo "Package query failed"
           echo ""
           echo "=== Listing /lib ==="
           ls -la /lib/ | grep -i apk || echo "No apk files in /lib"
@@ -71,6 +71,7 @@ import glob
 print('Files matching *libapk* in /lib:', glob.glob('/lib/*libapk*'))
 print('Files matching *libapk* in /usr/lib:', glob.glob('/usr/lib/*libapk*'))
 
+found = False
 for path in ['/lib', '/usr/lib']:
     print(f'\\nTrying LoadLibrary with paths from {path}:')
     for name in ['libapk.so.2.14.1', 'libapk.so.2.14.0', 'libapk.so', 'libapk.so.3']:
@@ -78,12 +79,17 @@ for path in ['/lib', '/usr/lib']:
         try:
             lib = cdll.LoadLibrary(full_path)
             print(f'  ✓ SUCCESS: {full_path}')
-            exit(0)
+            found = True
+            break
         except Exception as e:
             print(f'  ✗ {full_path}: {e}')
-print('\\nAll attempts failed')
-exit(1)
-"
+    if found:
+        break
+
+if not found:
+    print('\\nWARNING: All library loading attempts failed')
+    print('The Initialize DB step will likely fail')
+" || echo "Debug script completed with warnings"
 
       - name: Initialize DB
         run: flask init-db
